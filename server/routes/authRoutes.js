@@ -22,16 +22,16 @@ const router = express.Router();
 // Server/routes/authRoutes.js (የተስተካከለ transporter ቅንብር)
 // Nodemailer setup
 const transporter = nodemailer.createTransport({
-  // 🔑 ማስተካከያ: Gmail የማያቋርጥ ETIMEDOUT ስላለ ወደ Outlook ቀይረናል
-  host: "smtp-mail.outlook.com", 
-  port: 587, 
-  secure: false, 
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, 
-  },
-  connectionTimeout: 20000, // ጊዜውንም ጨምረናል
-  greetingTimeout: 10000, 
+  // 🔑 ማስተካከያ: Gmail የማያቋርጥ ETIMEDOUT ስላለ ወደ Outlook ቀይረናል
+  host: "smtp-mail.outlook.com", // ✅ ትክክለኛ የ Outlook Host
+  port: 587, // ✅ ትክክለኛ የ TLS Port
+  secure: false, // ✅ ለ Port 587 (StartTLS) ትክክል
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  connectionTimeout: 20000,
+  greetingTimeout: 10000,
 });
 // ------------------------------------
 // 1. REGISTER & SEND OTP
