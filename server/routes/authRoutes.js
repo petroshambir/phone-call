@@ -7,18 +7,32 @@ const router = express.Router();
 
 // Nodemailer setup
 // 🔑 ማስተካከያ: Gmail Host, Port, እና Timeoutን ጨምረናል (ለ ETIMEDOUT ስህተት)
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com", // Gmail SMTP Host
-  port: 587, // Standard TLS port
-  secure: false, // For port 587 (TLS)
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // ⚠️ ክፍተት የሌለበት መሆን አለበት!
-  },
-  connectionTimeout: 15000, // 15 ሰከንድ
-  greetingTimeout: 8000, // 8 ሰከንድ
-});
 
+// const transporter = nodemailer.createTransport({
+//   host: "smtp.gmail.com", // Gmail SMTP Host
+//   port: 587, // Standard TLS port
+//   secure: false, // For port 587 (TLS)
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASS, // ⚠️ ክፍተት የሌለበት መሆን አለበት!
+//   },
+//   connectionTimeout: 15000, // 15 ሰከንድ
+//   greetingTimeout: 8000, // 8 ሰከንድ
+// });
+// Server/routes/authRoutes.js (የተስተካከለ transporter ቅንብር)
+// Nodemailer setup
+const transporter = nodemailer.createTransport({
+  // 🔑 ማስተካከያ: Gmail የማያቋርጥ ETIMEDOUT ስላለ ወደ Outlook ቀይረናል
+  host: "smtp-mail.outlook.com", 
+  port: 587, 
+  secure: false, 
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, 
+  },
+  connectionTimeout: 20000, // ጊዜውንም ጨምረናል
+  greetingTimeout: 10000, 
+});
 // ------------------------------------
 // 1. REGISTER & SEND OTP
 // ------------------------------------
