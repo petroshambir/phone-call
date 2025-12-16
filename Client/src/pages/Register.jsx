@@ -12,7 +12,7 @@ function Register({ setUserPhone }) {
     const [message, setMessage] = useState("");
 
     const navigate = useNavigate();
-    const backendUrl = "http://localhost:5000/api/auth";
+    const backendUrl = "https://phone-call-backend.onrender.com";
 
     // -------- Send OTP --------
     const sendOtp = async () => {

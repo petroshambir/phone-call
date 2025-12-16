@@ -10,7 +10,7 @@ function AdminLogin({ setIsAdminAuthenticated }) {
   const [message, setMessage] = useState("");
 
   const navigate = useNavigate();
-  const backendUrl = "http://localhost:5000/api/admin";
+  const backendUrl = "https://phone-call-backend.onrender.com/api/admin";
 
   const handleLogin = async () => {
     if (!email || !password) return setMessage("Email እና Password አስገባ");

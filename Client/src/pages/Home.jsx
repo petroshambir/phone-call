@@ -18,7 +18,7 @@ function Home({ phone }) {
   const fetchMinutes = async () => {
     if (!phone) return;
     try {
-      const response = await axios.get(`http://localhost:5000/api/auth/user?phone=${encodeURIComponent(phone)}`);
+      const response = await axios.get(`https://phone-call-backend.onrender.com/api/auth/user?phone=${encodeURIComponent(phone)}`);
       const data = response.data;
       if (data.success && data.user && data.user.minutes !== undefined) {
         const minutes = Number(data.user.minutes);
@@ -35,7 +35,7 @@ function Home({ phone }) {
   useEffect(() => {
     if (!phone) return;
     fetchMinutes();
-    const eventSource = new EventSource(`http://localhost:5000/api/admin/updates?phone=${encodeURIComponent(phone)}`);
+    const eventSource = new EventSource(`https://phone-call-backend.onrender.com/api/admin/updates?phone=${encodeURIComponent(phone)}`);
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -95,7 +95,7 @@ function Home({ phone }) {
     setCallStatus('connecting');
 
     try {
-      const response = await axios.post("http://localhost:5000/api/call-user", {
+      const response = await axios.post("https://phone-call-backend.onrender.com/api/call-user", {
         userPhone: number, // የመጨረሻው ተደዋይ ቁጥር
         clientPhoneNumber: phone, // 👈 ጥሪውን የጀመረው (እርስዎ)
         callDuration: callMinutes
@@ -124,47 +124,7 @@ function Home({ phone }) {
       }, callStatus === 'ringing' ? 10000 : 5000); // 10s or 5s
     }
   };
-  // const handleCall = async () => {
-  //   if (secondsLeft < CALL_COST_SECONDS) {
-  //     alert("ጥሪ ለመጀመር ቢያንስ 1 ደቂቃ (60 ሰከንድ) የሎትም!");
-  //     return;
-  //   }
-  //   // ⚠️ ዓለም አቀፍ ቁጥር ፎርማት ቼክ: '+' ባይኖርም Twilio ይደውላል ነገር ግን ማስገደድ ለ Twilio ይረዳል
-  //   if (!number.startsWith('+') || number.length < 10) {
-  //     alert("እባክዎ ትክክለኛ ዓለም አቀፍ የስልክ ቁጥር በሀገር ኮድ (+XXX...) ያስገቡ!");
-  //     return;
-  //   }
-
-  //   const callMinutes = CALL_COST_SECONDS / 60;
-  //   setCallStatus('connecting');
-  //   // ... (የተቀረው የጥሪ ሎጂክ እንዳለ ይቀጥላል)
-  //   try {
-  //     const response = await axios.post("http://localhost:5000/api/call-user", {
-  //       userPhone: number,
-  //       callDuration: callMinutes
-  //     });
-  //     if (response.data.success) {
-  //       setSecondsLeft(response.data.minutesRemaining * 60);
-  //       setIsCalling(true);
-  //       setCallStatus('ringing');
-  //     } else {
-  //       setCallStatus('failed');
-  //       alert(response.data.message);
-  //       setSecondsLeft(response.data.minutesRemaining * 60);
-  //     }
-  //   } catch (error) {
-  //     setCallStatus('failed');
-  //     const msg = error.response ? error.response.data.message : "የሰርቨር ግንኙነት ስህተት!";
-  //     alert(msg);
-  //   } finally {
-  //     // Twilio Ringing Tone የሚቆየውን ያህል ጊዜ ከቆየ በኋላ Status ን እናጠፋለን
-  //     if (callStatus === 'ringing') {
-  //       setTimeout(() => setCallStatus(null), 10000);
-  //     } else {
-  //       setTimeout(() => setCallStatus(null), 5000);
-  //     }
-  //   }
-  // };
+ 
 
   // 5. የጥሪ ማቆም ተግባር (እንዳለ ይቀጥላል)
   const handleEndCall = () => {

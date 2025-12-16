@@ -1,11 +1,11 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Register from "./pages/Register";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import VerifyOtp from "./pages/VerifyOtp";
 import Home from "./pages/Home";
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+// import { Navigate } from "react-router-dom";
 
 function App() {
   const [userPhone, setUserPhone] = useState(null);
@@ -26,7 +26,15 @@ function App() {
         {/* 2. Verify OTP Page: Register Logic ወደዚህ ስለማይልክ ይህ Route አሁን አያስፈልግም/ባዶ ነው */}
         <Route
           path="/verify-otp"
-          element={<div>ይህ ገጽ በአሁን ጊዜ አይጠራም</div>}
+          element={
+            <VerifyOtp
+              setUserPhone={setUserPhone}
+              userEmail={tempUserEmail} // 🔑 አዲስ
+              phone={tempPhone}>
+
+              </VerifyOtp>
+          }
+          // element={<div>ይህ ገጽ በአሁን ጊዜ አይጠራም</div>}
         />
 
         {/* 3. Home Page: ስልክ ቁጥሩን እንደ prop እንልካለን */}

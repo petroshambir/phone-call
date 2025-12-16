@@ -24,7 +24,7 @@ function AdminDashboard() {
       }
 
       // ✅ ትክክለኛውን ኤንድፖይንት ይጠቀማል 
-      const res = await axios.post("http://localhost:5000/api/admin/add-minutes", {
+      const res = await axios.post("https://phone-call-backend.onrender.com/api/admin/add-minutes", {
         phone: phone.trim(),
         minutes: minutesValue // የተለወጠው ቁጥር
       });
