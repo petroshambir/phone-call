@@ -24,7 +24,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+
+// 🔑 ማስተካከያ፡ PathError እንዳይመጣ '*' የሚለውን በ (.*) ተክተናል
+app.options("(.*)", cors(corsOptions));
 
 // 3. JSON Body Parser
 app.use(express.json());
