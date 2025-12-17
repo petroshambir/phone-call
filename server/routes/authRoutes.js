@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 
 const router = express.Router();
 
-// 1. Nodemailer Transporter ቅንብር
+// 1. የኢሜይል መላኪያ (Nodemailer) ቅንብር
 const transporter = nodemailer.createTransport({
   host: "smtp-mail.outlook.com",
   port: 587,
@@ -16,9 +16,9 @@ const transporter = nodemailer.createTransport({
   connectionTimeout: 10000,
 });
 
-// ------------------------------------
-// 2. REGISTER & SEND OTP
-// ------------------------------------
+// ---------------------------------------------------------
+// 2. ተጠቃሚ መመዝገቢያ እና OTP መላኪያ
+// ---------------------------------------------------------
 router.post("/register-send-otp", async (req, res) => {
   const { email, phone, password } = req.body;
 
@@ -31,48 +31,45 @@ router.post("/register-send-otp", async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // ሀ. ተጠቃሚውን ዳታቤዝ ውስጥ ማስቀመጥ (ይህ በፍጥነት ይከናወናል)
+    // ሀ. ተጠቃሚውን ዳታቤዝ ውስጥ ማስቀመጥ
     await User.findOneAndUpdate(
       { email },
       { email, phone, password, otp, isVerified: false },
       { upsert: true, new: true }
     );
+    console.log(`✅ ተጠቃሚ ተመዝግቧል። OTP: ${otp}`);
 
-    console.log(`✅ ተጠቃሚ በ MongoDB ተቀምጧል። OTP: ${otp}`);
-
-    // ለ. ኢሜይል መላክ (🔑 ወሳኝ፦ 'await' አናደርገውም! 500 Error እንዳይመጣ)
+    // ለ. 🔑 ኢሜይሉን መላክ (await አናደርገውም - ከጀርባ ይሞክራል)
     transporter
       .sendMail({
         from: process.env.EMAIL_USER,
         to: email,
-        subject: "የምዝገባ ኮድ (OTP)",
+        subject: "የምዝገባ ኮድ",
         text: `የእርስዎ የማረጋገጫ ኮድ፡ ${otp}`,
       })
-      .then(() => {
-        console.log("📧 ኢሜይል በትክክል ተልኳል");
-      })
-      .catch((mailError) => {
-        console.error(
-          "❌ የኢሜይል መላክ ስህተት (Timeout ግን ችግር የለውም):",
-          mailError.message
-        );
+      .then(() => console.log("📧 ኢሜይል በትክክል ተልኳል"))
+      .catch((err) => {
+        console.log("❌ ኢሜይል መላክ አልተቻለም (Timeout):", err.message);
+        // እዚህ ምንም አንመልስም - ሰርቨሩ ስራውን ይቀጥላል
       });
 
-    // ሐ. ወዲያውኑ ለ Front-end ስኬታማ ምላሽ መስጠት
+    // ሐ. 🔑 በጣም ወሳኝ፡ ይህ መልስ ከ transporter ውጭ ነው (Timeout ስህተትን ይፈታል)
     return res.status(200).json({
       success: true,
-      message: "OTP ተፈጥሯል (ኢሜይሉ ካልደረሰ Network Tab ይመልከቱ)",
-      debugOtp: otp, // ይህንን ለጊዜው ኮፒ አድርገህ መግባት ትችላለህ
+      message: "OTP ተፈጥሯል",
+      debugOtp: otp,
     });
   } catch (error) {
-    console.error("❌ አጠቃላይ የሰርቨር ስህተት:", error.message);
-    res.status(500).json({ success: false, message: "የሰርቨር ስህተት አጋጥሟል" });
+    console.error("❌ የዳታቤዝ ስህተት:", error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
+    }
   }
 });
 
-// ------------------------------------
-// 3. VERIFY OTP
-// ------------------------------------
+// ---------------------------------------------------------
+// 3. OTP ማረጋገጫ (Verify OTP)
+// ---------------------------------------------------------
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -86,16 +83,16 @@ router.post("/verify-otp", async (req, res) => {
       await user.save();
       return res.json({ success: true, message: "ማረጋገጫው ተሳክቷል!" });
     } else {
-      return res.json({ success: false, message: "የተሳሳተ ኮድ!" });
+      return res.json({ success: false, message: "የተሳሳተ ኮድ ነው!" });
     }
   } catch (err) {
     res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
   }
 });
 
-// ------------------------------------
-// 4. GET USER (ደቂቃን ለማየት)
-// ------------------------------------
+// ---------------------------------------------------------
+// 4. የተጠቃሚ መረጃ ማግኛ (ደቂቃን ለማየት)
+// ---------------------------------------------------------
 router.get("/user", async (req, res) => {
   try {
     const { phone } = req.query;
