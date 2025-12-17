@@ -15,6 +15,9 @@ const transporter = nodemailer.createTransport({
   connectionTimeout: 10000,
 });
 
+// ------------------------------------
+// 2. REGISTER & SEND OTP
+// ------------------------------------
 router.post("/register-send-otp", async (req, res) => {
   const { email, phone, password } = req.body;
 
@@ -27,16 +30,14 @@ router.post("/register-send-otp", async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 1. መጀመሪያ ተጠቃሚውን ዳታቤዝ ውስጥ እናስቀምጥ
+    // ሀ. መጀመሪያ ዳታቤዝ ላይ መመዝገቡን እናረጋግጥ
     await User.findOneAndUpdate(
       { email },
       { email, phone, password, otp, isVerified: false },
       { upsert: true, new: true }
     );
-    console.log(`✅ User saved. OTP: ${otp}`);
 
-    // 2. ኢሜይል መላክ (🔑 ሳይቆይ ከጀርባ እንዲሰራ await አናደርገውም)
-    // ይህ በሎጉ የታየውን ETIMEDOUT ስህተት ለተጠቃሚው እንዳይታይ ያደርጋል
+    // ለ. ኢሜይል መላክ (🔑 ሳይቆይ ከጀርባ እንዲሰራ await አናደርገውም)
     transporter
       .sendMail({
         from: process.env.EMAIL_USER,
@@ -44,20 +45,56 @@ router.post("/register-send-otp", async (req, res) => {
         subject: "የምዝገባ ኮድ",
         text: `ኮድዎ፡ ${otp}`,
       })
-      .then(() => console.log("📧 Email sent"))
-      .catch((err) => console.error("❌ Email Timeout Error:", err.message));
+      .catch((err) => console.log("Email Error ignored for now:", err.message));
 
-    // 3. ወዲያውኑ ምላሽ እንስጥ
+    // ሐ. ወዲያውኑ ምላሽ እንስጥ (ይህ 500 Errorን ይከላከላል)
     return res.status(200).json({
       success: true,
-      message: "OTP ተፈጥሯል (ኢሜይሉ ካልደረሰ Network Tab ይመልከቱ)",
-      debugOtp: otp, // ይህንን ለጊዜው ለመግባት ተጠቀምበት
+      message: "OTP ተፈጥሯል",
+      debugOtp: otp,
     });
   } catch (error) {
-    console.error("❌ Register Error:", error.message);
     res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
   }
 });
 
-// ... (verify-otp እና get user ኮድ እንዳለ ይቀጥላል)
+// ------------------------------------
+// 3. VERIFY OTP
+// ------------------------------------
+router.post("/verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.json({ success: false, message: "ተጠቃሚው የለም" });
+
+    if (user.otp === otp) {
+      user.isVerified = true;
+      user.otp = null;
+      await user.save();
+      return res.json({ success: true, message: "ተሳክቷል!" });
+    } else {
+      return res.json({ success: false, message: "የተሳሳተ ኮድ!" });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
+  }
+});
+
+// ------------------------------------
+// 4. GET USER
+// ------------------------------------
+router.get("/user", async (req, res) => {
+  try {
+    const { phone } = req.query;
+    const user = await User.findOne({ phone });
+    if (!user) return res.status(404).json({ success: false, message: "የለም" });
+    res.json({
+      success: true,
+      user: { phone: user.phone, minutes: user.minutes || 0 },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
+  }
+});
+
 export default router;
