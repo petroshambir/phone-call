@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  connectionTimeout: 10000, // 10 ሰከንድ ካለፈ ይቁም
+  connectionTimeout: 10000,
 });
 
 // ------------------------------------
@@ -21,42 +21,42 @@ const transporter = nodemailer.createTransport({
 // ------------------------------------
 router.post("/register-send-otp", async (req, res) => {
   const { email, phone, password } = req.body;
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   try {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // 1. መጀመሪያ ዳታቤዝ ላይ ዳታውን አስቀምጥ (ይህ የግድ መሳካት አለበት)
+    // ሀ. መጀመሪያ ዳታቤዝ ላይ ዳታውን አስቀምጥ
     await User.findOneAndUpdate(
       { email },
       { email, phone, password, otp, isVerified: false },
       { upsert: true, new: true }
     );
-    console.log(`✅ ተጠቃሚ ዳታቤዝ ገብቷል። OTP: ${otp}`);
+    console.log(`✅ DB Updated: ${otp}`);
 
-    // 2. 🔑 ቁልፍ መፍትሄ፡ 'await' አትጠቀም!
-    // ኢሜይሉ ቢዘገይም ባይሳካም ሰርቨሩ ለተጠቃሚው ምላሽ መስጠቱን አይከለክልም
+    // ለ. 🔑 ወሳኝ፡ ለ Frontend ወዲያውኑ "Success" ምላሽ ስጥ!
+    // ይህ ዌብሳይቱ ሳይቆይ ወደ verify-otp ገጽ እንዲቀየር ያደርገዋል
+    res.status(200).json({
+      success: true,
+      message: "OTP ተፈጥሯል",
+      debugOtp: otp,
+    });
+
+    // ሐ. ኢሜይሉን ከምላሹ በኋላ 'በጀርባ' እንዲሞክር አዘዝነው
+    // 'await' ስለሌለው ሰርቨሩ አይቆምም
     transporter
       .sendMail({
         from: process.env.EMAIL_USER,
         to: email,
-        subject: "OTP Verification",
-        text: `የእርስዎ ኮድ: ${otp}`,
+        subject: "Your OTP Code",
+        text: `የእርስዎ ማረጋገጫ ኮድ፡ ${otp}`,
       })
       .catch((err) =>
-        console.log(
-          "⚠️ Email sending failed in background, but user is registered."
-        )
+        console.log("📧 Background Email Error (Timeout):", err.message)
       );
-
-    // 3. ወዲያውኑ ለተጠቃሚው ስኬታማ ምላሽ ስጥ
-    return res.status(200).json({
-      success: true,
-      message: "በተሳካ ሁኔታ ተመዝግበዋል!",
-      debugOtp: otp, // ኢሜይሉ ባይመጣ እንኳ እዚህ ጋር አይተው መግባት ይችላሉ
-    });
   } catch (error) {
-    console.error("❌ ዳታቤዝ ስህተት:", error.message);
-    res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
+    console.error("❌ DB Error:", error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
+    }
   }
 });
 
@@ -90,8 +90,10 @@ router.get("/user", async (req, res) => {
   try {
     const { phone } = req.query;
     const user = await User.findOne({ phone });
+
     if (!user)
       return res.status(404).json({ success: false, message: "ተጠቃሚ የለም" });
+
     res.json({
       success: true,
       user: {
