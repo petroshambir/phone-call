@@ -14,9 +14,8 @@ mongoose
   .then(() => console.log("✅ MongoDB connected Successfully"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// 2. CORS Configuration (ተስተካክሏል)
+// 2. CORS Configuration
 const corsOptions = {
-  // ለበለጠ ደህንነት የእርስዎን Front-end URL እዚህ ያስቀምጡ
   origin: ["https://phone-call-frontend.onrender.com", "http://localhost:5173"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -24,10 +23,7 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 
-// CORS Middleware መጠቀም
 app.use(cors(corsOptions));
-
-// 🔑 በጣም አስፈላጊ፡ ከሁሉም ሩቶች በፊት ለ "Pre-flight" (OPTIONS) ጥያቄዎች ምላሽ እንዲሰጥ ይህንን ይጨምሩ
 app.options("*", cors(corsOptions));
 
 // 3. JSON Body Parser
@@ -36,9 +32,9 @@ app.use(express.json());
 // 4. Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api", callRoutes); // ለ Twilio Webhook እና Call API
+app.use("/api", callRoutes);
 
-// 5. Health Check (ሰርቨሩ መስራቱን ለማረጋገጥ)
+// 5. Health Check
 app.get("/", (req, res) => {
   res.send("Backend Server is Running! 🚀");
 });
