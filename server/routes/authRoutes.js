@@ -20,50 +20,36 @@ const transporter = nodemailer.createTransport({
 // 2. ተጠቃሚ መመዝገቢያ እና OTP መላኪያ
 // ---------------------------------------------------------
 router.post("/register-send-otp", async (req, res) => {
-  const { email, phone, password } = req.body;
-
   try {
-    if (!email || !phone) {
-      return res
-        .status(400)
-        .json({ success: false, message: "ኢሜይል እና ስልክ ያስፈልጋል" });
-    }
-
+    const { email, phone, password } = req.body;
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // ሀ. ተጠቃሚውን ዳታቤዝ ውስጥ ማስቀመጥ
+    // 1. ዳታቤዝ ላይ ማስቀመጥ (ይህ ተሳክቷል!)
     await User.findOneAndUpdate(
       { email },
       { email, phone, password, otp, isVerified: false },
       { upsert: true, new: true }
     );
-    console.log(`✅ ተጠቃሚ ተመዝግቧል። OTP: ${otp}`);
 
-    // ለ. 🔑 ኢሜይሉን መላክ (await አናደርገውም - ከጀርባ ይሞክራል)
+    // 2. ኢሜይሉን መላክ (ሳይቆይ ከጀርባ እንዲሰራ await አታድርገው)
     transporter
       .sendMail({
         from: process.env.EMAIL_USER,
         to: email,
-        subject: "የምዝገባ ኮድ",
-        text: `የእርስዎ የማረጋገጫ ኮድ፡ ${otp}`,
+        subject: "Your OTP",
+        text: `Code: ${otp}`,
       })
-      .then(() => console.log("📧 ኢሜይል በትክክል ተልኳል"))
-      .catch((err) => {
-        console.log("❌ ኢሜይል መላክ አልተቻለም (Timeout):", err.message);
-        // እዚህ ምንም አንመልስም - ሰርቨሩ ስራውን ይቀጥላል
-      });
+      .catch((err) => console.log("Email Timeout (Ignored)"));
 
-    // ሐ. 🔑 በጣም ወሳኝ፡ ይህ መልስ ከ transporter ውጭ ነው (Timeout ስህተትን ይፈታል)
+    // 3. 🔑 ወሳኝ፡ ለተጠቃሚው ወዲያውኑ 200 OK ምላሽ ስጥ
     return res.status(200).json({
       success: true,
       message: "OTP ተፈጥሯል",
       debugOtp: otp,
     });
   } catch (error) {
-    console.error("❌ የዳታቤዝ ስህተት:", error.message);
-    if (!res.headersSent) {
-      res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
-    }
+    // ዳታቤዝ ላይ ችግር ካለ ብቻ 500 ይላካል
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
