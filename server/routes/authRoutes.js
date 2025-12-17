@@ -6,16 +6,21 @@ const router = express.Router();
 
 // 1. Nodemailer Transporter ቅንብር
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465, // ወደ 465 ቀይረነዋል
-  secure: true, // 465 ከሆነ የግድ true መሆን አለበት
+  // 'host' ላይ በቀጥታ የGmail IP እንጠቀማለን (ይህ DNS Errorን ያስቀራል)
+  host: "173.194.76.108",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS, // ባለ 16 አሃዝ App Password
   },
   tls: {
     rejectUnauthorized: false,
+    servername: "smtp.gmail.com", // ይህ ለደህንነት ማረጋገጫ አስፈላጊ ነው
   },
+  connectionTimeout: 40000, // ጊዜውን ወደ 40 ሰከንድ አሳድገነዋል
+  greetingTimeout: 20000,
+  socketTimeout: 20000,
 });
 // ------------------------------------
 // 2. REGISTER & SEND OTP
