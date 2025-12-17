@@ -15,29 +15,35 @@ const client = twilio(accountSid, authToken);
 const REQUIRED_MINUTES_PER_CALL = 1;
 
 // ************************************************************
-// 2. 🔑 TwiML Webhook Route (ድምፅን የሚቆጣጠር - የተስተካከለ)
+// 2. 🔑 TwiML Webhook Route (ድምፅ እንዲሰማ የተስተካከለ)
 // ************************************************************
-// Twilio ጥሪው አንዴ ከተነሳ በኋላ Webhookን ይጠራዋል
 router.post("/twiml-control", (req, res) => {
-  console.log("Twilio Webhook: TwiML ጥያቄ ደርሷል");
+  console.log("🔔 Twilio Webhook: TwiML ጥያቄ ደርሷል");
+  
   const VoiceResponse = twilio.twiml.VoiceResponse;
   const twiml = new VoiceResponse();
-  const targetNumber = req.query.targetNumber; // userPhone ይዟል
+  
+  // 🔑 ማስተካከያ፦ Twilio ቁጥሩን ከ Query ወይም ከ Body ሊያመጣ ስለሚችል ሁለቱንም እንፈትሻለን
+  const targetNumber = req.query.targetNumber || req.body.targetNumber; 
 
   if (targetNumber) {
-    // ድምፁን ለማሻሻል
-    twiml.say("ጥሪዎ አሁን እየተገናኘ ነው። እባክዎ ይጠብቁ።"); // 📞 ወሳኝ ማስተካከያ: <Dial> ውስጥ <Number> Tagን መጠቀም ድምፅን ያገናኛል።
-    twiml.dial().number(targetNumber);
-    console.log(`TwiML: ወደ ተደዋይ ቁጥር ${targetNumber} ለመደወል <Dial> ተልኳል።`);
+    console.log(`📞 ጥሪው ወደ ${targetNumber} እየተገናኘ ነው...`);
+    
+    // 🔊 ተጠቃሚው ስልኩን ሲያነሳ የሚሰማው የመጀመሪያ ድምፅ
+    twiml.say({ voice: 'alice', language: 'en-US' }, "Connecting your call. Please wait.");
+    
+    // 🔗 ደዋዩንና ተደዋዩን ማገናኘት
+    // <Dial> ተደዋዩ ስልኩን እስኪያነሳ ድረስ የደወል ድምፅ (Ringing) ያሰማል
+    twiml.dial(targetNumber); 
+    
   } else {
-    twiml.say("Sorry, the target number was not found in the URL. Goodbye!");
-    console.log("TwiML: ተደዋይ ቁጥር አልተገኘም፣ ጥሪው ይቋረጣል።");
+    console.log("⚠️ ስህተት፦ ተደዋይ ቁጥር አልተገኘም!");
+    twiml.say("Sorry, we could not find the number to dial. Goodbye.");
   }
 
   res.type("text/xml");
   res.send(twiml.toString());
 });
-
 // ************************************************************
 // 3. 🔑 ጥሪውን የሚጀምረው API (/call-user - የተስተካከለ)
 // ************************************************************
