@@ -6,16 +6,16 @@ const router = express.Router();
 
 // 1. Nodemailer Transporter ቅንብር
 const transporter = nodemailer.createTransport({
-  host: "smtp-mail.outlook.com",
+  service: "gmail",
+  host: "smtp.gmail.com",
   port: 587,
-  secure: false,
+  secure: false, // TLS
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS, // App Password መሆኑን አረጋግጥ
   },
-  connectionTimeout: 10000,
+  connectionTimeout: 10000, // 10 ሰከንድ መጠበቂያ
 });
-
 // ------------------------------------
 // 2. REGISTER & SEND OTP
 // ------------------------------------
