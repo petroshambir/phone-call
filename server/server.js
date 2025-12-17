@@ -25,7 +25,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// 🔑 ማስተካከያ፡ PathError እንዳይመጣ '*' የሚለውን በ (.*) ተክተናል
+// 🔑 ማስተካከያ፦ በ Render Log የታየውን የ PathError ስህተት ለመፍታት (.*) ተጠቅመናል
 app.options("(.*)", cors(corsOptions));
 
 // 3. JSON Body Parser
@@ -36,10 +36,12 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api", callRoutes);
 
+// 5. Health Check
 app.get("/", (req, res) => {
   res.send("Backend Server is Running! 🚀");
 });
 
+// 6. Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🔥 Server running on port ${PORT}`);

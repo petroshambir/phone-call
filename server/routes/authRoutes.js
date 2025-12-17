@@ -4,6 +4,7 @@ import nodemailer from "nodemailer";
 
 const router = express.Router();
 
+// 1. Nodemailer Transporter ቅንብር
 const transporter = nodemailer.createTransport({
   host: "smtp-mail.outlook.com",
   port: 587,
@@ -30,31 +31,42 @@ router.post("/register-send-otp", async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // ሀ. መጀመሪያ ዳታቤዝ ላይ መመዝገቡን እናረጋግጥ
+    // ሀ. ተጠቃሚውን ዳታቤዝ ውስጥ ማስቀመጥ (ይህ በፍጥነት ይከናወናል)
     await User.findOneAndUpdate(
       { email },
       { email, phone, password, otp, isVerified: false },
       { upsert: true, new: true }
     );
 
-    // ለ. ኢሜይል መላክ (🔑 ሳይቆይ ከጀርባ እንዲሰራ await አናደርገውም)
+    console.log(`✅ ተጠቃሚ በ MongoDB ተቀምጧል። OTP: ${otp}`);
+
+    // ለ. ኢሜይል መላክ (🔑 ወሳኝ፦ 'await' አናደርገውም! 500 Error እንዳይመጣ)
     transporter
       .sendMail({
         from: process.env.EMAIL_USER,
         to: email,
-        subject: "የምዝገባ ኮድ",
-        text: `ኮድዎ፡ ${otp}`,
+        subject: "የምዝገባ ኮድ (OTP)",
+        text: `የእርስዎ የማረጋገጫ ኮድ፡ ${otp}`,
       })
-      .catch((err) => console.log("Email Error ignored for now:", err.message));
+      .then(() => {
+        console.log("📧 ኢሜይል በትክክል ተልኳል");
+      })
+      .catch((mailError) => {
+        console.error(
+          "❌ የኢሜይል መላክ ስህተት (Timeout ግን ችግር የለውም):",
+          mailError.message
+        );
+      });
 
-    // ሐ. ወዲያውኑ ምላሽ እንስጥ (ይህ 500 Errorን ይከላከላል)
+    // ሐ. ወዲያውኑ ለ Front-end ስኬታማ ምላሽ መስጠት
     return res.status(200).json({
       success: true,
-      message: "OTP ተፈጥሯል",
-      debugOtp: otp,
+      message: "OTP ተፈጥሯል (ኢሜይሉ ካልደረሰ Network Tab ይመልከቱ)",
+      debugOtp: otp, // ይህንን ለጊዜው ኮፒ አድርገህ መግባት ትችላለህ
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
+    console.error("❌ አጠቃላይ የሰርቨር ስህተት:", error.message);
+    res.status(500).json({ success: false, message: "የሰርቨር ስህተት አጋጥሟል" });
   }
 });
 
@@ -65,13 +77,14 @@ router.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
     const user = await User.findOne({ email });
-    if (!user) return res.json({ success: false, message: "ተጠቃሚው የለም" });
+
+    if (!user) return res.json({ success: false, message: "ተጠቃሚው አልተገኘም" });
 
     if (user.otp === otp) {
       user.isVerified = true;
       user.otp = null;
       await user.save();
-      return res.json({ success: true, message: "ተሳክቷል!" });
+      return res.json({ success: true, message: "ማረጋገጫው ተሳክቷል!" });
     } else {
       return res.json({ success: false, message: "የተሳሳተ ኮድ!" });
     }
@@ -81,16 +94,23 @@ router.post("/verify-otp", async (req, res) => {
 });
 
 // ------------------------------------
-// 4. GET USER
+// 4. GET USER (ደቂቃን ለማየት)
 // ------------------------------------
 router.get("/user", async (req, res) => {
   try {
     const { phone } = req.query;
     const user = await User.findOne({ phone });
-    if (!user) return res.status(404).json({ success: false, message: "የለም" });
+
+    if (!user)
+      return res.status(404).json({ success: false, message: "ተጠቃሚ የለም" });
+
     res.json({
       success: true,
-      user: { phone: user.phone, minutes: user.minutes || 0 },
+      user: {
+        phone: user.phone,
+        minutes: user.minutes || 0,
+        isVerified: user.isVerified,
+      },
     });
   } catch (err) {
     res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
