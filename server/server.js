@@ -20,16 +20,13 @@ const corsOptions = {
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
-  optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
 
-// 🔑 ማስተካከያ፦ በ Render Log የታየውን የ PathError ስህተት ለመፍታት (.*) ተጠቅመናል
-app.options("(.*)", cors(corsOptions));
-
-// 3. JSON Body Parser
+// 3. Body Parsers (ጠቃሚ ማስተካከያ)
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // Twilio ለሚልከው ዳታ የግድ ያስፈልጋል
 
 // 4. Routes
 app.use("/api/auth", authRoutes);

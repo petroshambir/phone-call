@@ -6,15 +6,20 @@ const router = express.Router();
 
 // 1. Nodemailer Transporter ቅንብር
 const transporter = nodemailer.createTransport({
-  service: "gmail",
   host: "smtp.gmail.com",
   port: 587,
-  secure: false, // TLS
+  secure: false, // ለ 587 የግድ false መሆን አለበት
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // App Password መሆኑን አረጋግጥ
+    pass: process.env.EMAIL_PASS, // ባለ 16 አሃዝ App Password
   },
-  connectionTimeout: 10000, // 10 ሰከንድ መጠበቂያ
+  // 🔑 ይህ ክፍል ለ Render በጣም ወሳኝ ነው
+  tls: {
+    rejectUnauthorized: false, // ሰርቲፊኬት ጥብቅነትን ያቃልላል
+    minVersion: "TLSv1.2", // ደህንነቱ የተጠበቀ ግንኙነት ያረጋግጣል
+  },
+  connectionTimeout: 15000, // ጊዜውን ወደ 15 ሰከንድ ከፍ አድርገነዋል
+  greetingTimeout: 10000, // ሰርቨሩ ሰላምታ እስኪለዋወጥ የሚጠበቅ ጊዜ
 });
 // ------------------------------------
 // 2. REGISTER & SEND OTP
