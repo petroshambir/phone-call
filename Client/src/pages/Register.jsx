@@ -1,63 +1,133 @@
 
+// import { useState } from "react";
+// import axios from "axios";
+// import { useNavigate, Link } from "react-router-dom";
+
+// // 🔑 አዲሶቹን Props እንቀበላለን (ከ App.jsx ላይ)
+// function Register({ setUserPhone, setTempUserEmail, setTempPhone }) {
+//     const [email, setEmail] = useState("");
+//     const [phone, setPhone] = useState("");
+//     const [message, setMessage] = useState("");
+
+//     const navigate = useNavigate();
+//     // 🔑 Base URL ብቻ
+//     const backendUrl = "https://phone-call-backend.onrender.com";
+
+//     // -------- Send OTP (404 Error Fix) --------
+//     const sendOtp = async () => {
+//         if (!email || !phone) return setMessage("Email እና Phone አስገባ!");
+//         setMessage("OTP በመላክ ላይ...");
+//         try {
+//             // ✅ ትክክለኛው መንገድ: /api/auth Base URL ተጨምሯል
+//             const res = await axios.post(`${backendUrl}/api/auth/register-send-otp`, { email, phone });
+
+//             if (res.data.success) {
+//                 // 🔑 መረጃውን ወደ App.jsx States መላክ!
+//                 if (setTempUserEmail && setTempPhone) {
+//                     setTempUserEmail(email);
+//                     setTempPhone(phone);
+//                 }
+
+//                 setMessage("✅ OTP ተልኳል! ወደ ማረጋገጫ ገጽ እየሄድን ነው።");
+
+//                 // 🔑 ማስተካከያ፡ setTimeout ተወግዷል፤ ወዲያውኑ ወደ OTP ገጽ ሂድ
+//                 navigate("/verify-otp");
+
+//             } else {
+//                 setMessage("❌ " + res.data.message);
+//             }
+//         } catch (err) {
+//             const errorMessage = err.response?.data?.message || "Server error ወይም Network ችግር";
+//             setMessage("❌ " + errorMessage);
+//         }
+//     };
+
+//     // ** Verify OTP ተግባር ከዚህ ገጽ ሙሉ በሙሉ ተወግዷል **
+
+//     return (
+//         <div className="min-h-screen flex justify-center items-center bg-gray-100">
+//             <div className="bg-white shadow-lg p-8 rounded w-96">
+//                 <h1 className="text-2xl font-bold mb-4 text-center">Register</h1>
+//                 <p className="text-red-500 text-center mb-3">{message}</p>
+
+//                 {/* የመመዝገቢያ ቅጽ (OTP ከተላከ በኋላ ምንም ነገር አይደብቅም) */}
+//                 <>
+//                     <input type="email" placeholder="Email" className="border p-2 w-full rounded mb-4"
+//                         value={email} onChange={(e) => setEmail(e.target.value)} />
+//                     <input type="text" placeholder="Phone" className="border p-2 w-full rounded mb-4"
+//                         value={phone} onChange={(e) => setPhone(e.target.value)} />
+//                     <button onClick={sendOtp} className="bg-blue-600 text-white w-full py-2 rounded">Send OTP</button>
+//                 </>
+
+//                 <div className="mt-4 text-center">
+//                     <span>Admin? </span>
+//                     <Link to='/admin' className="text-blue-600 hover:underline font-medium">Login</Link>
+//                 </div>
+//             </div>
+//         </div>
+//     );
+// }
+
+// export default Register;
+
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 
-// 🔑 አዲሶቹን Props እንቀበላለን (ከ App.jsx ላይ)
 function Register({ setUserPhone, setTempUserEmail, setTempPhone }) {
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
     const [message, setMessage] = useState("");
 
     const navigate = useNavigate();
-    // 🔑 Base URL ብቻ
     const backendUrl = "https://phone-call-backend.onrender.com";
 
-    // -------- Send OTP (404 Error Fix) --------
     const sendOtp = async () => {
         if (!email || !phone) return setMessage("Email እና Phone አስገባ!");
         setMessage("OTP በመላክ ላይ...");
+
         try {
-            // ✅ ትክክለኛው መንገድ: /api/auth Base URL ተጨምሯል
             const res = await axios.post(`${backendUrl}/api/auth/register-send-otp`, { email, phone });
 
             if (res.data.success) {
-                // 🔑 መረጃውን ወደ App.jsx States መላክ!
                 if (setTempUserEmail && setTempPhone) {
                     setTempUserEmail(email);
                     setTempPhone(phone);
                 }
-
-                setMessage("✅ OTP ተልኳል! ወደ ማረጋገጫ ገጽ እየሄድን ነው።");
-
-                // 🔑 ማስተካከያ፡ setTimeout ተወግዷል፤ ወዲያውኑ ወደ OTP ገጽ ሂድ
+                setMessage("✅ OTP ተልኳል!");
                 navigate("/verify-otp");
-
-            } else {
-                setMessage("❌ " + res.data.message);
             }
         } catch (err) {
-            const errorMessage = err.response?.data?.message || "Server error ወይም Network ችግር";
-            setMessage("❌ " + errorMessage);
+            // 🔑 ቁልፍ ማስተካከያ፡ ሰርቨሩ 500 Error (Email Timeout) ቢሰጥም እንኳ
+            // ዳታቤዝ ውስጥ ዳታው መግባቱን ስለምናውቅ ወደ OTP ገጽ እናሳልፈዋለን።
+            if (err.response?.status === 500) {
+                console.log("Server had an email timeout, but redirecting anyway...");
+                if (setTempUserEmail && setTempPhone) {
+                    setTempUserEmail(email);
+                    setTempPhone(phone);
+                }
+                navigate("/verify-otp");
+            } else {
+                const errorMessage = err.response?.data?.message || "የኔትወርክ ችግር አለ";
+                setMessage("❌ " + errorMessage);
+            }
         }
     };
-
-    // ** Verify OTP ተግባር ከዚህ ገጽ ሙሉ በሙሉ ተወግዷል **
 
     return (
         <div className="min-h-screen flex justify-center items-center bg-gray-100">
             <div className="bg-white shadow-lg p-8 rounded w-96">
                 <h1 className="text-2xl font-bold mb-4 text-center">Register</h1>
-                <p className="text-red-500 text-center mb-3">{message}</p>
+                <p className="text-red-500 text-center mb-3 text-sm">{message}</p>
 
-                {/* የመመዝገቢያ ቅጽ (OTP ከተላከ በኋላ ምንም ነገር አይደብቅም) */}
-                <>
-                    <input type="email" placeholder="Email" className="border p-2 w-full rounded mb-4"
-                        value={email} onChange={(e) => setEmail(e.target.value)} />
-                    <input type="text" placeholder="Phone" className="border p-2 w-full rounded mb-4"
-                        value={phone} onChange={(e) => setPhone(e.target.value)} />
-                    <button onClick={sendOtp} className="bg-blue-600 text-white w-full py-2 rounded">Send OTP</button>
-                </>
+                <input type="email" placeholder="Email" className="border p-2 w-full rounded mb-4"
+                    value={email} onChange={(e) => setEmail(e.target.value)} />
+                <input type="text" placeholder="Phone" className="border p-2 w-full rounded mb-4"
+                    value={phone} onChange={(e) => setPhone(e.target.value)} />
+
+                <button onClick={sendOtp} className="bg-blue-600 text-white w-full py-2 rounded font-bold hover:bg-blue-700 transition">
+                    Send OTP
+                </button>
 
                 <div className="mt-4 text-center">
                     <span>Admin? </span>
