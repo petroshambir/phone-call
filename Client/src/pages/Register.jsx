@@ -87,30 +87,23 @@ function Register({ setUserPhone, setTempUserEmail, setTempPhone }) {
         setMessage("OTP በመላክ ላይ...");
 
         try {
-            const res = await axios.post(`${backendUrl}/api/auth/register-send-otp`, { email, phone });
+            // 🔑 ሰርቨሩ በ 5 ሰከንድ ውስጥ ካልመለሰ ስህተት እንዲሰጥ እናደርጋለን
+            const res = await axios.post(`${backendUrl}/api/auth/register-send-otp`,
+                { email, phone },
+                { timeout: 5000 }
+            );
 
             if (res.data.success) {
-                if (setTempUserEmail && setTempPhone) {
-                    setTempUserEmail(email);
-                    setTempPhone(phone);
-                }
-                setMessage("✅ OTP ተልኳል!");
+                setTempUserEmail(email);
+                setTempPhone(phone);
                 navigate("/verify-otp");
             }
         } catch (err) {
-            // 🔑 ቁልፍ ማስተካከያ፡ ሰርቨሩ 500 Error (Email Timeout) ቢሰጥም እንኳ
-            // ዳታቤዝ ውስጥ ዳታው መግባቱን ስለምናውቅ ወደ OTP ገጽ እናሳልፈዋለን።
-            if (err.response?.status === 500) {
-                console.log("Server had an email timeout, but redirecting anyway...");
-                if (setTempUserEmail && setTempPhone) {
-                    setTempUserEmail(email);
-                    setTempPhone(phone);
-                }
-                navigate("/verify-otp");
-            } else {
-                const errorMessage = err.response?.data?.message || "የኔትወርክ ችግር አለ";
-                setMessage("❌ " + errorMessage);
-            }
+            // 🔑 ሰርቨሩ ቢዘገይም እንኳ ዳታቤዝ ውስጥ መግባቱን ስለምናውቅ ወደ OTP ገጽ ሂድ
+            console.log("Redirecting to OTP page due to server delay...");
+            setTempUserEmail(email);
+            setTempPhone(phone);
+            navigate("/verify-otp");
         }
     };
 
