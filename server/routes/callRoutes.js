@@ -15,20 +15,32 @@ const REQUIRED_MINUTES_PER_CALL = 1;
 // ************************************************************
 router.post("/twiml-control", (req, res) => {
   console.log("🔔 Twilio Webhook: TwiML ጥያቄ ደርሷል");
+
   const VoiceResponse = twilio.twiml.VoiceResponse;
   const twiml = new VoiceResponse();
 
-  const targetNumber = req.query.targetNumber || req.body.targetNumber;
+  // 🔑 ቁጥሩን በሦስት መንገድ መፈለግ (ይበልጥ አስተማማኝ ነው)
+  let targetNumber =
+    req.query.targetNumber || req.body.targetNumber || req.body.To;
 
   if (targetNumber) {
+    // 🔑 ቁጥሩ በ + መጀመሩን ማረጋገጥ (ለ "Busy" መፍትሄ)
+    if (!targetNumber.startsWith("+")) {
+      targetNumber = "+" + targetNumber;
+    }
+
     console.log(`📞 ጥሪው ወደ ${targetNumber} እየተገናኘ ነው...`);
+
     twiml.say(
       { voice: "alice", language: "en-US" },
       "Connecting your call. Please wait."
     );
+
+    // 🔊 ጥሪውን ማገናኘት
     twiml.dial(targetNumber);
   } else {
-    twiml.say("Sorry, we could not find the number to dial.");
+    console.log("⚠️ ስህተት፦ ተደዋይ ቁጥር አልተገኘም!");
+    twiml.say("Sorry, the number is missing.");
   }
 
   res.type("text/xml");
