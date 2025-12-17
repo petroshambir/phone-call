@@ -19,12 +19,12 @@ router.post("/twiml-control", (req, res) => {
   const VoiceResponse = twilio.twiml.VoiceResponse;
   const twiml = new VoiceResponse();
 
-  // 🔑 ቁጥሩን በሦስት መንገድ መፈለግ (ይበልጥ አስተማማኝ ነው)
+  // ቁጥሩን ከ Query ወይም ከ Body እንፈልጋለን
   let targetNumber =
     req.query.targetNumber || req.body.targetNumber || req.body.To;
 
   if (targetNumber) {
-    // 🔑 ቁጥሩ በ + መጀመሩን ማረጋገጥ (ለ "Busy" መፍትሄ)
+    // 🔑 ቁጥሩ በ '+' መጀመሩን እናረጋግጣለን (ለ Busy መፍትሄው ይሄ ነው)
     if (!targetNumber.startsWith("+")) {
       targetNumber = "+" + targetNumber;
     }
@@ -36,7 +36,7 @@ router.post("/twiml-control", (req, res) => {
       "Connecting your call. Please wait."
     );
 
-    // 🔊 ጥሪውን ማገናኘት
+    // ተደዋዩን ማገናኘት
     twiml.dial(targetNumber);
   } else {
     console.log("⚠️ ስህተት፦ ተደዋይ ቁጥር አልተገኘም!");
@@ -46,7 +46,6 @@ router.post("/twiml-control", (req, res) => {
   res.type("text/xml");
   res.send(twiml.toString());
 });
-
 // ************************************************************
 // 3. 🔑 ጥሪውን የሚጀምረው API (ተስተካክሏል)
 // ************************************************************
