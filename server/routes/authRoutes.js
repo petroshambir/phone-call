@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 
 const router = express.Router();
 
-// 1. የኢሜይል መላኪያ (Nodemailer) ቅንብር
+// 1. Nodemailer Transporter ቅንብር
 const transporter = nodemailer.createTransport({
   host: "smtp-mail.outlook.com",
   port: 587,
@@ -13,49 +13,63 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  connectionTimeout: 10000,
+  connectionTimeout: 10000, // 10 ሰከንድ ካለፈ ይቁም
 });
 
-// ---------------------------------------------------------
-// 2. ተጠቃሚ መመዝገቢያ እና OTP መላኪያ
-// ---------------------------------------------------------
+// ------------------------------------
+// 2. REGISTER & SEND OTP
+// ------------------------------------
 router.post("/register-send-otp", async (req, res) => {
+  const { email, phone, password } = req.body;
+
   try {
-    const { email, phone, password } = req.body;
+    if (!email || !phone) {
+      return res
+        .status(400)
+        .json({ success: false, message: "ኢሜይል እና ስልክ ያስፈልጋል" });
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 1. ዳታቤዝ ላይ ማስቀመጥ (ይህ ተሳክቷል!)
+    // ሀ. ተጠቃሚውን ዳታቤዝ ውስጥ ማስቀመጥ (ይህ መጀመሪያ ይከናወናል)
     await User.findOneAndUpdate(
       { email },
       { email, phone, password, otp, isVerified: false },
       { upsert: true, new: true }
     );
+    console.log(`✅ ዳታቤዝ ተሳክቷል። OTP: ${otp}`);
 
-    // 2. ኢሜይሉን መላክ (ሳይቆይ ከጀርባ እንዲሰራ await አታድርገው)
+    // ለ. 🔑 ቁልፍ ለውጥ፦ ኢሜይሉን 'await' አናደርገውም!
+    // ሰርቨሩ ኢሜይሉ እስኪላክ ሳይጠብቅ ወዲያውኑ ለተጠቃሚው ምላሽ ይሰጣል።
     transporter
       .sendMail({
         from: process.env.EMAIL_USER,
         to: email,
-        subject: "Your OTP",
-        text: `Code: ${otp}`,
+        subject: "የምዝገባ ኮድ (OTP)",
+        text: `የእርስዎ ማረጋገጫ ኮድ፡ ${otp}`,
       })
-      .catch((err) => console.log("Email Timeout (Ignored)"));
+      .then(() => console.log("📧 ኢሜይል ተልኳል"))
+      .catch((err) =>
+        console.log("⚠️ የኢሜይል ግንኙነት ተቋርጧል (Timeout):", err.message)
+      );
 
-    // 3. 🔑 ወሳኝ፡ ለተጠቃሚው ወዲያውኑ 200 OK ምላሽ ስጥ
+    // ሐ. ወዲያውኑ ለ Front-end ስኬታማ ምላሽ መስጠት
     return res.status(200).json({
       success: true,
-      message: "OTP ተፈጥሯል",
-      debugOtp: otp,
+      message: "በተሳካ ሁኔታ ተመዝግበዋል። OTP በኢሜይል ተልኳል።",
+      debugOtp: otp, // ኢሜይሉ ባይመጣ እንኳ እዚህ ጋር አይተህ መግባት ትችላለህ
     });
   } catch (error) {
-    // ዳታቤዝ ላይ ችግር ካለ ብቻ 500 ይላካል
-    res.status(500).json({ success: false, error: error.message });
+    console.error("❌ የዳታቤዝ ስህተት:", error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: "የሰርቨር ስህተት አጋጥሟል" });
+    }
   }
 });
 
-// ---------------------------------------------------------
-// 3. OTP ማረጋገጫ (Verify OTP)
-// ---------------------------------------------------------
+// ------------------------------------
+// 3. VERIFY OTP
+// ------------------------------------
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -76,17 +90,15 @@ router.post("/verify-otp", async (req, res) => {
   }
 });
 
-// ---------------------------------------------------------
-// 4. የተጠቃሚ መረጃ ማግኛ (ደቂቃን ለማየት)
-// ---------------------------------------------------------
+// ------------------------------------
+// 4. GET USER
+// ------------------------------------
 router.get("/user", async (req, res) => {
   try {
     const { phone } = req.query;
     const user = await User.findOne({ phone });
-
     if (!user)
       return res.status(404).json({ success: false, message: "ተጠቃሚ የለም" });
-
     res.json({
       success: true,
       user: {
