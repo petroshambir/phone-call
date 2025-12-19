@@ -1,20 +1,27 @@
 import express from "express";
-import ZadarmaPackage from "zadarma"; // ላይብረሪውን በሌላ ስም ጥራው
+import ZadarmaPackage from "zadarma";
 import nodemailer from "nodemailer";
 import User from "../models/userModel.js";
 
 const router = express.Router();
 const REQUIRED_MINUTES_PER_CALL = 1;
 
-// ES Modules ስህተትን ለመከላከል: Zadarma ን ከ package ውስጥ በትክክል ማውጣት
+// ES Modules (Node v22) ላይ Constructor ስህተትን ለመከላከል:
+// ZadarmaPackage.Zadarma ካልሰራ ZadarmaPackage.default.Zadarma ን ይሞክራል
 const Zadarma =
-  ZadarmaPackage.Zadarma || ZadarmaPackage.default || ZadarmaPackage;
+  ZadarmaPackage.Zadarma ||
+  (ZadarmaPackage.default ? ZadarmaPackage.default.Zadarma : ZadarmaPackage);
 
 // 1. Zadarma Configuration
-const api = new Zadarma({
-  key: process.env.ZADARMA_KEY,
-  secret: process.env.ZADARMA_SECRET,
-});
+let api;
+try {
+  api = new Zadarma({
+    key: process.env.ZADARMA_KEY,
+    secret: process.env.ZADARMA_SECRET,
+  });
+} catch (error) {
+  console.error("❌ Zadarma Initialization Error:", error.message);
+}
 
 // 2. Nodemailer Configuration
 const transporter = nodemailer.createTransport({
@@ -78,6 +85,12 @@ router.post("/call-user", async (req, res) => {
     `📞 Zadarma Call Request: To ${userPhone} From ${clientPhoneNumber}`
   );
 
+  if (!api) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Zadarma API አልተዘጋጀም" });
+  }
+
   try {
     const user = await User.findOne({ phone: clientPhoneNumber });
     if (!user || user.minutes < REQUIRED_MINUTES_PER_CALL) {
@@ -114,6 +127,4 @@ router.post("/call-user", async (req, res) => {
   }
 });
 
-
 export default router;
- 
