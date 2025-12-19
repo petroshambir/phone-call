@@ -4,15 +4,15 @@ import nodemailer from "nodemailer";
 import User from "../models/userModel.js";
 
 const router = express.Router();
-const REQUIRED_MINUTES_PER_CALL = 1; // 👈 ይህች መስመር የግድ መኖር አለባት
+const REQUIRED_MINUTES_PER_CALL = 1;
 
-// Zadarma Setup
+// 1. Zadarma Configuration
 const api = new Zadarma({
   key: process.env.ZADARMA_KEY,
   secret: process.env.ZADARMA_SECRET,
 });
 
-// Nodemailer Setup
+// 2. Nodemailer Configuration
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
@@ -67,9 +67,12 @@ router.post("/verify-otp", async (req, res) => {
   }
 });
 
-// --- CALL ROUTE (ZADARMA) ---
+// --- ZADARMA CALL ROUTE ---
 router.post("/call-user", async (req, res) => {
   const { userPhone, clientPhoneNumber } = req.body;
+  console.log(
+    `📞 Zadarma Call Request: To ${userPhone} From ${clientPhoneNumber}`
+  );
 
   try {
     const user = await User.findOne({ phone: clientPhoneNumber });
@@ -84,10 +87,12 @@ router.post("/call-user", async (req, res) => {
         to: userPhone,
       },
       async (err, data) => {
-        if (err)
+        if (err) {
+          console.error("❌ Zadarma Error:", err);
           return res
             .status(500)
-            .json({ success: false, message: "Zadarma Error" });
+            .json({ success: false, message: "Zadarma Server Error" });
+        }
 
         const response = typeof data === "string" ? JSON.parse(data) : data;
 
