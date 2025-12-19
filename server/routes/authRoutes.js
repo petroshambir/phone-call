@@ -10,11 +10,9 @@ const REQUIRED_MINUTES_PER_CALL = 1;
  * Node.js v22 (ESM) ላይ የ Zadarma ላይብረሪ አወቃቀርን ለማስተካከል
  * የሚደረግ ብልሃት።
  */
-const Zadarma =
-  ZadarmaPackage.Zadarma ||
-  (ZadarmaPackage.default && ZadarmaPackage.default.Zadarma) ||
-  ZadarmaPackage.default ||
-  ZadarmaPackage;
+const Zadarma = ZadarmaPackage.default
+  ? ZadarmaPackage.default.Zadarma || ZadarmaPackage.default
+  : ZadarmaPackage.Zadarma || ZadarmaPackage;
 
 // 1. Zadarma Configuration
 let api;
