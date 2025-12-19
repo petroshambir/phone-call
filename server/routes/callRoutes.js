@@ -49,19 +49,79 @@ router.post("/twiml-control", (req, res) => {
 // ************************************************************
 // 3. 🔑 ጥሪውን የሚጀምረው API (ተስተካክሏል)
 // ************************************************************
+// router.post("/call-user", async (req, res) => {
+//   const { userPhone, clientPhoneNumber } = req.body;
+
+//   console.log(`1. የጥሪ ጥያቄ፡ ተደዋይ: ${userPhone}, ደዋይ: ${clientPhoneNumber}`);
+
+//   if (!userPhone?.startsWith("+") || !clientPhoneNumber?.startsWith("+")) {
+//     return res
+//       .status(400)
+//       .json({ success: false, message: "ቁጥሮች በ '+' መጀመር አለባቸው" });
+//   }
+
+//   try {
+//     // 2. ደቂቃ መቀነስ
+//     const updatedUser = await User.findOneAndUpdate(
+//       {
+//         phone: clientPhoneNumber,
+//         minutes: { $gte: REQUIRED_MINUTES_PER_CALL },
+//       },
+//       { $inc: { minutes: -REQUIRED_MINUTES_PER_CALL } },
+//       { new: true }
+//     );
+
+//     if (!updatedUser) {
+//       return res.status(403).json({ success: false, message: "በቂ ደቂቃ የለዎትም!" });
+//     }
+
+//     console.log(`✅ 3. ደቂቃ ተቀንሷል። ቀሪ፡ ${updatedUser.minutes}`);
+
+//     // 🔑 4. ቀጥታ የ Render URL መጠቀም (BASE_URL ችግር እንዳይፈጥር)
+//     const callUrl = `https://phone-call-backend.onrender.com/api/twiml-control?targetNumber=${encodeURIComponent(
+//       userPhone
+//     )}`;
+
+//     console.log(`🔗 Twilio የሚጠራው URL: ${callUrl}`);
+
+//     // 5. ጥሪውን መፍጠር
+//     await client.calls.create({
+//       url: callUrl,
+//       to: clientPhoneNumber, // መጀመሪያ ለአንተ ይደውላል
+//       from: process.env.TWILIO_PHONE_NUMBER,
+//     });
+
+//     console.log("✅ 5. Twilio ጥሪ ተልኳል።");
+
+//     return res.json({
+//       success: true,
+//       message: "ጥሪ ተጀምሯል! ስልኩ ሲነሳ ማንኛውንም ቁጥር ይጫኑ።",
+//       minutesRemaining: updatedUser.minutes,
+//     });
+//   } catch (error) {
+//     console.error("❌ የሰርቨር ስህተት:", error.message);
+//     res
+//       .status(500)
+//       .json({ success: false, message: "የሰርቨር ስህተት", error: error.message });
+//   }
+// });
 router.post("/call-user", async (req, res) => {
   const { userPhone, clientPhoneNumber } = req.body;
 
-  console.log(`1. የጥሪ ጥያቄ፡ ተደዋይ: ${userPhone}, ደዋይ: ${clientPhoneNumber}`);
+  console.log(`📞 የጥሪ ጥያቄ፡ ተደዋይ: ${userPhone}, ደዋይ: ${clientPhoneNumber}`);
 
+  // 1. የቁጥሮች ትክክለኛነት ማረጋገጫ
   if (!userPhone?.startsWith("+") || !clientPhoneNumber?.startsWith("+")) {
     return res
       .status(400)
-      .json({ success: false, message: "ቁጥሮች በ '+' መጀመር አለባቸው" });
+      .json({
+        success: false,
+        message: "ቁጥሮች በ '+' መጀመር አለባቸው (ለምሳሌ፦ +251...)",
+      });
   }
 
   try {
-    // 2. ደቂቃ መቀነስ
+    // 2. ደቂቃ መቀነስ (ተጠቃሚው በቂ ደቂቃ እንዳለው ማረጋገጥ)
     const updatedUser = await User.findOneAndUpdate(
       {
         phone: clientPhoneNumber,
@@ -72,38 +132,39 @@ router.post("/call-user", async (req, res) => {
     );
 
     if (!updatedUser) {
-      return res.status(403).json({ success: false, message: "በቂ ደቂቃ የለዎትም!" });
+      return res
+        .status(403)
+        .json({ success: false, message: "በቂ ደቂቃ የለዎትም! እባክዎ ቀሪ ሂሳብዎን ይሙሉ።" });
     }
 
-    console.log(`✅ 3. ደቂቃ ተቀንሷል። ቀሪ፡ ${updatedUser.minutes}`);
+    console.log(`✅ ደቂቃ ተቀንሷል። ቀሪ ሂሳብ፡ ${updatedUser.minutes}`);
 
-    // 🔑 4. ቀጥታ የ Render URL መጠቀም (BASE_URL ችግር እንዳይፈጥር)
+    // 3. 🔑 Render ላይ የሚሰራው ትክክለኛ Webhook URL
     const callUrl = `https://phone-call-backend.onrender.com/api/twiml-control?targetNumber=${encodeURIComponent(
       userPhone
     )}`;
 
-    console.log(`🔗 Twilio የሚጠራው URL: ${callUrl}`);
-
-    // 5. ጥሪውን መፍጠር
+    // 4. Twilio ጥሪውን እንዲጀምር ማዘዝ
     await client.calls.create({
       url: callUrl,
-      to: clientPhoneNumber, // መጀመሪያ ለአንተ ይደውላል
+      to: clientPhoneNumber, // መጀመሪያ ለደዋዩ (ለእርስዎ) ይደውላል
       from: process.env.TWILIO_PHONE_NUMBER,
     });
 
-    console.log("✅ 5. Twilio ጥሪ ተልኳል።");
+    console.log("🚀 Twilio ጥሪውን በስኬት ጀምሯል");
 
     return res.json({
       success: true,
-      message: "ጥሪ ተጀምሯል! ስልኩ ሲነሳ ማንኛውንም ቁጥር ይጫኑ።",
+      message: "ጥሪ ተጀምሯል! ስልክዎ ሲጠራ ያንሱት።",
       minutesRemaining: updatedUser.minutes,
     });
   } catch (error) {
-    console.error("❌ የሰርቨር ስህተት:", error.message);
-    res
-      .status(500)
-      .json({ success: false, message: "የሰርቨር ስህተት", error: error.message });
+    console.error("❌ Twilio/Server Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "ጥሪውን መጀመር አልተቻለም።",
+      error: error.message,
+    });
   }
 });
-
 export default router;
