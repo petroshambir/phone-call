@@ -43,13 +43,14 @@
 // app.listen(PORT, () => {
 //   console.log(`🔥 Server running on port ${PORT}`);
 // });
+
 import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js"; // ያንተ ፋይል ስም
 import adminRoutes from "./routes/adminRoutes.js";
-
+import callRoutes from "./routes/callRoutes.js";
 const app = express();
 
 // 1. MongoDB Connection
@@ -77,6 +78,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes); // ይህ ለ Login/Register/OTP ይሆናል
 app.use("/api", authRoutes); // ይህ ለ /call-user እንዲሰራ ያደርገዋል (404 እንዳይመጣ)
 app.use("/api/admin", adminRoutes);
+app.use("/api", callRoutes);
 
 // 5. Health Check
 app.get("/", (req, res) => {
