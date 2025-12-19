@@ -1,10 +1,13 @@
 import express from "express";
-import Zadarma from "zadarma";
+import ZadarmaLib from "zadarma"; // ስሙን ወደ ZadarmaLib ቀይረነዋል
 import nodemailer from "nodemailer";
 import User from "../models/userModel.js";
 
 const router = express.Router();
 const REQUIRED_MINUTES_PER_CALL = 1;
+
+// ES Modules ላይ "not a constructor" ስህተትን ለመከላከል እንዲህ እንጠቀማለን
+const Zadarma = ZadarmaLib.default || ZadarmaLib;
 
 // 1. Zadarma Configuration
 const api = new Zadarma({
