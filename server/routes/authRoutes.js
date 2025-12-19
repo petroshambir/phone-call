@@ -6,11 +6,15 @@ import User from "../models/userModel.js";
 const router = express.Router();
 const REQUIRED_MINUTES_PER_CALL = 1;
 
-// ES Modules (Node v22) ላይ Constructor ስህተትን ለመከላከል:
-// ZadarmaPackage.Zadarma ካልሰራ ZadarmaPackage.default.Zadarma ን ይሞክራል
+/**
+ * Node.js v22 (ESM) ላይ የ Zadarma ላይብረሪ አወቃቀርን ለማስተካከል
+ * የሚደረግ ብልሃት።
+ */
 const Zadarma =
   ZadarmaPackage.Zadarma ||
-  (ZadarmaPackage.default ? ZadarmaPackage.default.Zadarma : ZadarmaPackage);
+  (ZadarmaPackage.default && ZadarmaPackage.default.Zadarma) ||
+  ZadarmaPackage.default ||
+  ZadarmaPackage;
 
 // 1. Zadarma Configuration
 let api;
@@ -19,6 +23,7 @@ try {
     key: process.env.ZADARMA_KEY,
     secret: process.env.ZADARMA_SECRET,
   });
+  console.log("✅ Zadarma API Initialized Successfully");
 } catch (error) {
   console.error("❌ Zadarma Initialization Error:", error.message);
 }
@@ -37,7 +42,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// --- OTP ROUTES ---
+// --- OTP ROUTES (ምዝገባ እና ማረጋገጫ) ---
+
 router.post("/register-send-otp", async (req, res) => {
   const { email, phone, password } = req.body;
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -53,7 +59,7 @@ router.post("/register-send-otp", async (req, res) => {
       from: `"Habesha Tel" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Your Verification Code",
-      html: `<h3>Habesha Tel</h3><p>ኮድዎ፡ <b>${otp}</b></p>`,
+      html: `<h3>Habesha Tel</h3><p>የማረጋገጫ ኮድዎ፡ <b>${otp}</b></p>`,
     });
 
     res.status(200).json({ success: true, message: "OTP ተልኳል" });
@@ -78,25 +84,35 @@ router.post("/verify-otp", async (req, res) => {
   }
 });
 
-// --- ZADARMA CALL ROUTE ---
+// --- ZADARMA CALL ROUTE (የጥሪ ሎጂክ) ---
+
 router.post("/call-user", async (req, res) => {
   const { userPhone, clientPhoneNumber } = req.body;
+
   console.log(
     `📞 Zadarma Call Request: To ${userPhone} From ${clientPhoneNumber}`
   );
 
+  // API መዘጋጀቱን ማረጋገጥ
   if (!api) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Zadarma API አልተዘጋጀም" });
+    return res.status(500).json({
+      success: false,
+      message: "Zadarma API አልተዘጋጀም። እባክዎ ሰርቨሩን እንደገና ያስጀምሩ።",
+    });
   }
 
   try {
+    // ተጠቃሚውን በዳታቤዝ መፈለግ
     const user = await User.findOne({ phone: clientPhoneNumber });
+
     if (!user || user.minutes < REQUIRED_MINUTES_PER_CALL) {
-      return res.status(403).json({ success: false, message: "በቂ ደቂቃ የለዎትም!" });
+      return res.status(403).json({
+        success: false,
+        message: "በቂ ደቂቃ የለዎትም! እባክዎ ቀሪ ሂሳብዎን ይሙሉ።",
+      });
     }
 
+    // Zadarma Callback ጥያቄ
     api.request(
       "/v1/request/callback/",
       {
@@ -106,19 +122,29 @@ router.post("/call-user", async (req, res) => {
       async (err, data) => {
         if (err) {
           console.error("❌ Zadarma Error:", err);
-          return res
-            .status(500)
-            .json({ success: false, message: "Zadarma Server Error" });
+          return res.status(500).json({
+            success: false,
+            message: "ከጥሪ ሰርቨሩ ጋር መገናኘት አልተቻለም",
+          });
         }
 
         const response = typeof data === "string" ? JSON.parse(data) : data;
 
         if (response.status === "success") {
+          // ጥሪው ከተሳካ ደቂቃ መቀነስ
           user.minutes -= REQUIRED_MINUTES_PER_CALL;
           await user.save();
-          res.json({ success: true, minutesRemaining: user.minutes });
+
+          res.json({
+            success: true,
+            message: "ጥሪው እየተደረገ ነው...",
+            minutesRemaining: user.minutes,
+          });
         } else {
-          res.status(400).json({ success: false, message: response.message });
+          res.status(400).json({
+            success: false,
+            message: response.message || "ጥሪውን መጀመር አልተቻለም",
+          });
         }
       }
     );
