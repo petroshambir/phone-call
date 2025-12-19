@@ -47,8 +47,7 @@ import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
-import userRoute from "./routes/userRoute.js"; // Zadarma ያለበት ፋይል
-import authRoutes from "./routes/authRoutes.js";
+import authRoutes from "./routes/authRoutes.js"; // ያንተ ፋይል ስም
 import adminRoutes from "./routes/adminRoutes.js";
 
 const app = express();
@@ -68,18 +67,23 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// 3. Body Parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 4. Routes (Zadarma እዚህ ነው ያለው)
-app.use("/api/auth", authRoutes);
+// 4. Routes
+// እዚህ ጋር በደንብ አስተውል!
+app.use("/api/auth", authRoutes); // ይህ ለ Login/Register/OTP ይሆናል
+app.use("/api", authRoutes); // ይህ ለ /call-user እንዲሰራ ያደርገዋል (404 እንዳይመጣ)
 app.use("/api/admin", adminRoutes);
-app.use("/api", userRoute); // callRoutes ወደ userRoute ተቀይሯል
 
+// 5. Health Check
 app.get("/", (req, res) => {
-  res.send("Backend Server is Running with Zadarma! 🚀");
+  res.send("Habesha Tel Backend is Live! 🚀");
 });
 
+// 6. Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🔥 Server running on port ${PORT}`);
