@@ -1,53 +1,44 @@
 import User from "../models/userModel.js";
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 export const registerSendOtpController = async (req, res) => {
   try {
+    // 1. መረጃው መምጣቱን ቼክ እናድርግ
+    console.log("ከFrontend የመጣ ዳታ:", req.body);
     const { email, phone } = req.body;
-    if (!email || !phone)
+
+    if (!email || !phone) {
       return res
         .status(400)
-        .json({ success: false, message: "Email/Phone ይሙሉ" });
+        .json({ success: false, message: "ኢሜይል ወይም ስልክ ጎድሏል" });
+    }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await User.findOneAndUpdate(
       { email },
-      { email, phone, otp, isVerified: false },
+      { email, phone, otp },
       { upsert: true }
     );
 
-    await transporter.sendMail({
-      from: `"Habesha Tel" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "OTP Code",
-      text: `Your OTP is: ${otp}`,
+    // 2. ኢሜይል መላኪያ (Nodemailer)
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS, // <--- 16 ፊደል App Password
+      },
     });
 
-    return res.status(200).json({ success: true, message: "OTP ተልኳል" });
-  } catch (err) {
-    console.log("CRITICAL EMAIL ERROR:", err); // Render Logs ላይ ይሄን ፈልግ
-    return res
-      .status(500)
-      .json({ success: false, message: "የኢሜይል ችግር: " + err.message });
-  }
-};
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "OTP Code",
+      text: `የእርስዎ ኮድ: ${otp}`,
+    });
 
-export const verifyOtpController = async (req, res) => {
-  const { email, otp } = req.body;
-  const user = await User.findOne({ email, otp });
-  if (user) {
-    user.isVerified = true;
-    user.otp = null;
-    await user.save();
-    return res.status(200).json({ success: true });
+    res.status(200).json({ success: true, message: "ኮዱ ተልኳል" });
+  } catch (error) {
+    console.error("የሰርቨር ስህተት:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
-  return res.status(400).json({ success: false, message: "ኮዱ ስህተት ነው" });
 };

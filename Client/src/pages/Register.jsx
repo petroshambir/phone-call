@@ -2,40 +2,34 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-function Register({ setTempUserEmail, setTempPhone }) {
+const Register = ({ setTempUserEmail }) => {
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
-    const [message, setMessage] = useState("");
     const navigate = useNavigate();
 
-    // መጨረሻው ላይ / እንዳይኖር
-    const backendUrl = "https://phone-call-backend.onrender.com";
-
-    const sendOtp = async () => {
-        if (!email || !phone) return setMessage("❌ መረጃዎችን ያስገቡ");
-        setMessage("⏳ በመላክ ላይ...");
+    const handleSendOtp = async () => {
         try {
-            // ትክክለኛ አድራሻ
-           
-            // አድራሻውን በትክክል እንዲህ አድርገህ አስተካክል
-            const res = await axios.post(`${backendUrl}/api/auth/register-send-otp`, { email, phone });
+            // ዳታውን በ Object {email, phone} መልክ መላክ
+            const res = await axios.post("https://phone-call-backend.onrender.com/api/auth/register-send-otp", {
+                email,
+                phone
+            });
+
             if (res.data.success) {
                 setTempUserEmail(email);
-                setTempPhone(phone);
                 navigate("/verify-otp");
             }
         } catch (err) {
-            setMessage("❌ ስህተት: " + (err.response?.data?.message || "ሰርቨሩ አልመለሰም"));
+            alert(err.response?.data?.message || "ስህተት ተፈጥሯል");
         }
     };
 
     return (
-        <div className="flex flex-col p-10">
-            <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 mb-2" />
-            <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="border p-2 mb-2" />
-            <button onClick={sendOtp} className="bg-blue-500 text-white p-2">Send OTP</button>
-            <p>{message}</p>
+        <div>
+            <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
+            <input type="text" placeholder="Phone" onChange={(e) => phone(e.target.value)} />
+            <button onClick={handleSendOtp}>Send OTP</button>
         </div>
     );
-}
+};
 export default Register;
