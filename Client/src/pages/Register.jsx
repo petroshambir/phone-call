@@ -82,31 +82,49 @@ function Register({ setUserPhone, setTempUserEmail, setTempPhone }) {
     const navigate = useNavigate();
     const backendUrl = "https://phone-call-backend.onrender.com";
 
+    // const sendOtp = async () => {
+    //     if (!email || !phone) return setMessage("Email እና Phone አስገባ!");
+    //     setMessage("OTP በመላክ ላይ...");
+
+    //     try {
+    //         // 🔑 ሰርቨሩ በ 5 ሰከንድ ውስጥ ካልመለሰ ስህተት እንዲሰጥ እናደርጋለን
+    //         const res = await axios.post(`${backendUrl}/api/auth/register-send-otp`,
+    //             { email, phone },
+    //             { timeout: 5000 }
+    //         );
+
+    //         if (res.data.success) {
+    //             setTempUserEmail(email);
+    //             setTempPhone(phone);
+    //             navigate("/verify-otp");
+    //         }
+    //     } catch (err) {
+    //         // 🔑 ሰርቨሩ ቢዘገይም እንኳ ዳታቤዝ ውስጥ መግባቱን ስለምናውቅ ወደ OTP ገጽ ሂድ
+    //         console.log("Redirecting to OTP page due to server delay...");
+    //         setTempUserEmail(email);
+    //         setTempPhone(phone);
+    //         navigate("/verify-otp");
+    //     }
+    // };
     const sendOtp = async () => {
         if (!email || !phone) return setMessage("Email እና Phone አስገባ!");
         setMessage("OTP በመላክ ላይ...");
-
         try {
-            // 🔑 ሰርቨሩ በ 5 ሰከንድ ውስጥ ካልመለሰ ስህተት እንዲሰጥ እናደርጋለን
-            const res = await axios.post(`${backendUrl}/api/auth/register-send-otp`,
-                { email, phone },
-                { timeout: 5000 }
-            );
+            const res = await axios.post(`${backendUrl}/api/register-send-otp`, { email, phone });
 
             if (res.data.success) {
                 setTempUserEmail(email);
                 setTempPhone(phone);
                 navigate("/verify-otp");
+            } else {
+                setMessage("❌ " + res.data.message);
             }
         } catch (err) {
-            // 🔑 ሰርቨሩ ቢዘገይም እንኳ ዳታቤዝ ውስጥ መግባቱን ስለምናውቅ ወደ OTP ገጽ ሂድ
-            console.log("Redirecting to OTP page due to server delay...");
-            setTempUserEmail(email);
-            setTempPhone(phone);
-            navigate("/verify-otp");
+            console.error(err);
+            setMessage("❌ ኢሜይል መላክ አልተቻለም። እባክዎ App Password በትክክል መሙላትዎን ያረጋግጡ።");
         }
     };
-
+    
     return (
         <div className="min-h-screen flex justify-center items-center bg-gray-100">
             <div className="bg-white shadow-lg p-8 rounded w-96">
