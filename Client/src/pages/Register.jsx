@@ -152,15 +152,66 @@
 
 // export default Register;
 
+// import { useState } from "react";
+// import axios from "axios";
+// import { useNavigate, Link } from "react-router-dom";
+
+// function Register({ setUserPhone, setTempUserEmail, setTempPhone }) {
+//     const [email, setEmail] = useState("");
+//     const [phone, setPhone] = useState("");
+//     const [message, setMessage] = useState("");
+
+//     const navigate = useNavigate();
+//     const backendUrl = "https://phone-call-backend.onrender.com";
+
+//     const sendOtp = async () => {
+//         if (!email || !phone) return setMessage("❌ Email እና Phone ያስገባ!");
+//         setMessage("⏳ OTP በመላክ ላይ...");
+//         try {
+//             // ✅ በትክክል በፈንክሽኑ ውስጥ መሆን አለበት
+//             const res = await axios.post(`${backendUrl}/api/register-send-otp`, { email, phone });
+
+//             if (res.data.success) {
+//                 setTempUserEmail(email);
+//                 setTempPhone(phone);
+//                 navigate("/verify-otp");
+//             } else {
+//                 setMessage("❌ " + res.data.message);
+//             }
+//         } catch (err) {
+//             console.error(err);
+//             setMessage("❌ ስህተት ተፈጥሯል። ሰርቨሩን ወይም ኢንተርኔትዎን ያረጋግጡ።");
+//         }
+//     };
+
+//     return (
+//         <div className="min-h-screen flex justify-center items-center bg-gray-100">
+//             <div className="bg-white shadow-lg p-8 rounded w-96">
+//                 <h1 className="text-2xl font-bold mb-4 text-center">Register</h1>
+//                 <p className="text-red-500 text-center mb-3 text-sm">{message}</p>
+
+//                 <input type="email" placeholder="Email" className="border p-2 w-full rounded mb-4"
+//                     value={email} onChange={(e) => setEmail(e.target.value)} />
+//                 <input type="text" placeholder="Phone" className="border p-2 w-full rounded mb-4"
+//                     value={phone} onChange={(e) => setPhone(e.target.value)} />
+
+//                 <button onClick={sendOtp} className="bg-blue-600 text-white w-full py-2 rounded font-bold hover:bg-blue-700 transition">
+//                     Send OTP
+//                 </button>
+//             </div>
+//         </div>
+//     );
+// }
+// export default Register;
+
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-function Register({ setUserPhone, setTempUserEmail, setTempPhone }) {
+function Register({ setTempUserEmail, setTempPhone }) {
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
     const [message, setMessage] = useState("");
-
     const navigate = useNavigate();
     const backendUrl = "https://phone-call-backend.onrender.com";
 
@@ -168,19 +219,16 @@ function Register({ setUserPhone, setTempUserEmail, setTempPhone }) {
         if (!email || !phone) return setMessage("❌ Email እና Phone ያስገባ!");
         setMessage("⏳ OTP በመላክ ላይ...");
         try {
-            // ✅ በትክክል በፈንክሽኑ ውስጥ መሆን አለበት
+            // ✅ አሁን በትክክል በፈንክሽኑ ውስጥ ነው ያለው
             const res = await axios.post(`${backendUrl}/api/register-send-otp`, { email, phone });
 
             if (res.data.success) {
                 setTempUserEmail(email);
                 setTempPhone(phone);
                 navigate("/verify-otp");
-            } else {
-                setMessage("❌ " + res.data.message);
             }
         } catch (err) {
-            console.error(err);
-            setMessage("❌ ስህተት ተፈጥሯል። ሰርቨሩን ወይም ኢንተርኔትዎን ያረጋግጡ።");
+            setMessage("❌ ስህተት: " + (err.response?.data?.message || "ሰርቨር አልተገኘም"));
         }
     };
 
@@ -189,13 +237,11 @@ function Register({ setUserPhone, setTempUserEmail, setTempPhone }) {
             <div className="bg-white shadow-lg p-8 rounded w-96">
                 <h1 className="text-2xl font-bold mb-4 text-center">Register</h1>
                 <p className="text-red-500 text-center mb-3 text-sm">{message}</p>
-
                 <input type="email" placeholder="Email" className="border p-2 w-full rounded mb-4"
                     value={email} onChange={(e) => setEmail(e.target.value)} />
                 <input type="text" placeholder="Phone" className="border p-2 w-full rounded mb-4"
                     value={phone} onChange={(e) => setPhone(e.target.value)} />
-
-                <button onClick={sendOtp} className="bg-blue-600 text-white w-full py-2 rounded font-bold hover:bg-blue-700 transition">
+                <button onClick={sendOtp} className="bg-blue-600 text-white w-full py-2 rounded font-bold">
                     Send OTP
                 </button>
             </div>
