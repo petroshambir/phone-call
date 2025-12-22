@@ -1,168 +1,79 @@
-// // authController.js
-// import User from "../models/userModel.js";
-// import nodemailer from "nodemailer";
-
-// // -----------------
-// // Nodemailer setup
-// // -----------------
-// const transporter = nodemailer.createTransport({
-//   service: "gmail", // Gmail እንደ ሳስታት
-//   auth: {
-//     user: process.env.EMAIL_USER,
-//     pass: process.env.EMAIL_PASS, // Gmail App Password ካለ
-//   },
-// });
-
-// // -----------------
-// // Register & Send OTP
-// // -----------------
-// export const registerSendOtpController = async (req, res) => {
-//   try {
-//     const { email, phone } = req.body;
-//     if (!email || !phone)
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "Email and phone required!" });
-
-//     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-//     let user = await User.findOne({ email });
-//     if (!user) {
-//       user = await User.create({ email, phone, otp, isVerified: false });
-//     } else {
-//       user.otp = otp;
-//       user.isVerified = false;
-//       await user.save();
-//     }
-
-//     await transporter.sendMail({
-//       from: process.env.EMAIL_USER,
-//       to: email,
-//       subject: "Your OTP Code",
-//       text: `Your OTP code is: ${otp}`,
-//     });
-
-//     res.json({ success: true, message: "OTP sent successfully!", otp });
-//   } catch (err) {
-//     console.error("registerSendOtp error:", err);
-//     res.status(500).json({ success: false, message: "Server error" });
-//   }
-// };
-
-// // -----------------
-// // Verify OTP
-// // -----------------
-// export const verifyOtpController = async (req, res) => {
-//   try {
-//     const { email, otp } = req.body;
-//     if (!email || !otp)
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "Email and OTP required!" });
-
-//     const user = await User.findOne({ email });
-//     if (!user) return res.json({ success: false, message: "User not found!" });
-
-//     if (user.otp !== otp)
-//       return res.json({ success: false, message: "Incorrect OTP!" });
-
-//     user.isVerified = true;
-//     user.otp = null;
-//     await user.save();
-
-//     res.json({ success: true, message: "Verification successful!" });
-//   } catch (err) {
-//     console.error("verifyOtp error:", err);
-//     res.status(500).json({ success: false, message: "Server error" });
-//   }
-// };
-// authController.js
 import User from "../models/userModel.js";
 import nodemailer from "nodemailer";
 
-// -----------------
-// Nodemailer setup (ተስተካክሏል ✅)
-// -----------------
+// Nodemailer setup (Render-friendly ✅)
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // port 587 ከሆነ false መሆን አለበት
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // ባለ 16 አሃዝ App Password መሆኑን አረጋግጥ
+    pass: process.env.EMAIL_PASS, // ባለ 16 አሃዝ App Password
   },
   tls: {
-    rejectUnauthorized: false, // Render ላይ ግንኙነቱ እንዳይዘጋ ይረዳል
-    minVersion: "TLSv1.2"
+    rejectUnauthorized: false,
   },
-  connectionTimeout: 20000, // 20 ሰከንድ
-  greetingTimeout: 10000,
 });
 
-// -----------------
-// Register & Send OTP
-// -----------------
+// 1. Register & Send OTP
 export const registerSendOtpController = async (req, res) => {
   try {
     const { email, phone } = req.body;
-    if (!email || !phone)
+    if (!email || !phone) {
       return res
         .status(400)
-        .json({ success: false, message: "Email and phone required!" });
+        .json({ success: false, message: "ኢሜይልና ስልክ ያስፈልጋል!" });
+    }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    let user = await User.findOne({ email });
-    if (!user) {
-      user = await User.create({ email, phone, otp, isVerified: false });
-    } else {
-      user.otp = otp;
-      user.isVerified = false;
-      user.phone = phone; // ቁጥሩ ከተቀየረ ለማሻሻል
-      await user.save();
-    }
+    // ተጠቃሚውን መፈለግ ወይም መፍጠር
+    await User.findOneAndUpdate(
+      { email },
+      { email, phone, otp, isVerified: false },
+      { upsert: true, new: true }
+    );
 
-    // ኢሜል መላክ
+    // ኢሜይል መላክ
     await transporter.sendMail({
-      from: `"Support" <${process.env.EMAIL_USER}>`,
+      from: `"Habesha Tel" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Your OTP Code",
-      text: `Your OTP code is: ${otp}`,
-      html: `<b>Your OTP code is: <span style="color: blue; font-size: 20px;">${otp}</span></b>`,
+      subject: "የምዝገባ ኮድዎ",
+      html: `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
+              <h2>እንኳን ደህና መጡ!</h2>
+              <p>የእርስዎ ማረጋገጫ ኮድ፡ <b style="font-size: 24px; color: #2563eb;">${otp}</b></p>
+              <p>ይህ ኮድ ለ 10 ደቂቃ ብቻ ያገለግላል።</p>
+             </div>`,
     });
 
-    console.log(`✅ OTP (${otp}) sent to ${email}`);
-    res.json({ success: true, message: "OTP sent successfully!", otp });
-  } catch (err) {
-    console.error("registerSendOtp error:", err);
-    res.status(500).json({ success: false, message: "Server error", error: err.message });
+    console.log(`✅ OTP (${otp}) sent to: ${email}`);
+    res.status(200).json({ success: true, message: "OTP ተልኳል" });
+  } catch (error) {
+    console.error("❌ Auth Error:", error.message);
+    res
+      .status(500)
+      .json({ success: false, message: "ኢሜይል መላክ አልተቻለም፡ " + error.message });
   }
 };
 
-// -----------------
-// Verify OTP
-// -----------------
+// 2. Verify OTP
 export const verifyOtpController = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    if (!email || !otp)
+    if (!email || !otp) {
       return res
         .status(400)
-        .json({ success: false, message: "Email and OTP required!" });
+        .json({ success: false, message: "ኢሜይልና ኮድ ያስፈልጋል" });
+    }
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ success: false, message: "User not found!" });
+    if (user && user.otp === otp) {
+      user.isVerified = true;
+      user.otp = null;
+      await user.save();
+      return res.json({ success: true, message: "ማረጋገጫ ተሳክቷል!" });
+    }
 
-    if (user.otp !== otp)
-      return res.status(400).json({ success: false, message: "Incorrect OTP!" });
-
-    user.isVerified = true;
-    user.otp = null;
-    await user.save();
-
-    res.json({ success: true, message: "Verification successful!" });
+    res.status(400).json({ success: false, message: "የተሳሳተ ኮድ አስገብተዋል" });
   } catch (err) {
-    console.error("verifyOtp error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "የሰርቨር ስህተት" });
   }
 };
