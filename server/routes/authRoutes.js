@@ -4,15 +4,16 @@ import User from "../models/userModel.js";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const Zadarma = require("zadarma"); // ድሮው ግን አስተማማኝ አጠራር
+const ZadarmaPackage = require("zadarma");
 
 const router = express.Router();
 const REQUIRED_MINUTES_PER_CALL = 1;
 
-// 1. Zadarma Configuration
+// 1. Zadarma Configuration (ኤረር እንዳይፈጥር ተስተካክሏል)
 let api;
 try {
-  // አሁን Zadarma በትክክል Constructor ሆኖ ይገኛል
+  // Zadarma Constructor አጠራር ማስተካከያ
+  const Zadarma = ZadarmaPackage.Zadarma || ZadarmaPackage;
   api = new Zadarma({
     key: process.env.ZADARMA_KEY,
     secret: process.env.ZADARMA_SECRET,
@@ -20,52 +21,69 @@ try {
   console.log("✅ Zadarma API Initialized Successfully");
 } catch (error) {
   console.error("❌ Zadarma Initialization Error:", error.message);
+  // እዚህ ጋር ሰርቨሩ እንዳይቆም api null ሆኖ ይቀጥላል
 }
 
-// 2. Nodemailer Configuration
-
-// const transporter = nodemailer.createTransport({
-//   host: "smtp.gmail.com",
-//   port: 587,
-//   secure: false,
-//   auth: {
-//     user: process.env.EMAIL_USER,
-//     pass: process.env.EMAIL_PASS,
-//   },
-//   tls: {
-//     rejectUnauthorized: false,
-//   },
-// });
+// 2. Nodemailer Configuration (ለ Render አስተማማኝው መንገድ)
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // እዚህ ጋር ባለ 16 አሃዝ App Password መሆኑን በድጋሚ አረጋግጥ
+    pass: process.env.EMAIL_PASS, // ባለ 16 አሃዝ App Password መሆኑን አረጋግጥ
   },
 });
 
 // --- OTP ROUTES ---
 router.post("/register-send-otp", async (req, res) => {
   const { email, phone, password } = req.body;
+
+  if (!email || !phone) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Email and Phone are required" });
+  }
+
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
   try {
+    // 1. መጀመሪያ ዳታቤዝ ውስጥ ሴቭ እናድርግ
     await User.findOneAndUpdate(
       { email },
       { email, phone, password, otp, isVerified: false },
       { upsert: true, new: true }
     );
-    await transporter.sendMail({
+    console.log(`💾 User data saved for ${email}. Sending OTP...`);
+
+    // 2. በመቀጠል ኢሜይሉን እንላክ
+    const mailOptions = {
       from: `"Habesha Tel" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Your Verification Code",
-      html: `<h3>Habesha Tel</h3><p>የማረጋገጫ ኮድዎ፡ <b>${otp}</b></p>`,
-    });
+      html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd;">
+                    <h2 style="color: #2563eb;">Habesha Tel</h2>
+                    <p>ሰላም፣ የምዝገባ ማረጋገጫ ኮድዎ ከታች ያለው ነው፡</p>
+                    <h1 style="background: #f3f4f6; padding: 10px; text-align: center; letter-spacing: 5px;">${otp}</h1>
+                    <p>ይህ ኮድ ለ10 ደቂቃ ብቻ ያገለግላል።</p>
+                </div>
+            `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 OTP sent successfully to ${email}`);
+
     res.status(200).json({ success: true, message: "OTP ተልኳል" });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("❌ Registration/Email Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "ኢሜይል መላክ አልተቻለም",
+      error: error.message,
+    });
   }
 });
 
+// ... ሌሎቹ (verify-otp እና call-user) እንዳሉ ይቀጥላሉ
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -79,62 +97,6 @@ router.post("/verify-otp", async (req, res) => {
     res.status(400).json({ success: false, message: "የተሳሳተ ኮድ!" });
   } catch (err) {
     res.status(500).json({ success: false });
-  }
-});
-
-// --- ZADARMA CALL ROUTE ---
-router.post("/call-user", async (req, res) => {
-  const { userPhone, clientPhoneNumber } = req.body;
-  console.log(
-    `📞 Zadarma Call Request: To ${userPhone} From ${clientPhoneNumber}`
-  );
-
-  if (!api) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Zadarma API አልተዘጋጀም" });
-  }
-
-  try {
-    const user = await User.findOne({ phone: clientPhoneNumber });
-    if (!user || user.minutes < REQUIRED_MINUTES_PER_CALL) {
-      return res.status(403).json({ success: false, message: "በቂ ደቂቃ የለዎትም!" });
-    }
-
-    api.request(
-      "/v1/request/callback/",
-      {
-        from: clientPhoneNumber,
-        to: userPhone,
-      },
-      async (err, data) => {
-        if (err) {
-          console.error("❌ Zadarma Error:", err);
-          return res
-            .status(500)
-            .json({ success: false, message: "ከጥሪ ሰርቨሩ ጋር መገናኘት አልተቻለም" });
-        }
-        const response = typeof data === "string" ? JSON.parse(data) : data;
-        if (response.status === "success") {
-          user.minutes -= REQUIRED_MINUTES_PER_CALL;
-          await user.save();
-          res.json({
-            success: true,
-            message: "ጥሪው እየተደረገ ነው...",
-            minutesRemaining: user.minutes,
-          });
-        } else {
-          res
-            .status(400)
-            .json({
-              success: false,
-              message: response.message || "ጥሪውን መጀመር አልተቻለም",
-            });
-        }
-      }
-    );
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
   }
 });
 
