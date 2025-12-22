@@ -1,10 +1,10 @@
-import Zadarma from "zadarma";
 import User from "../models/userModel.js";
+import twilio from "twilio";
 
-const api = new Zadarma({
-  key: process.env.ZADARMA_KEY,
-  secret: process.env.ZADARMA_SECRET,
-});
+// Twilio Setup
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const client = twilio(accountSid, authToken);
 
 const REQUIRED_MINUTES_PER_CALL = 1;
 
@@ -19,6 +19,7 @@ export const startCall = async (req, res) => {
   }
 
   try {
+    // 1. ተጠቃሚውን መፈለግ (በስልክ ቁጥሩ)
     const user = await User.findOne({ phone: clientPhoneNumber });
 
     if (!user || user.minutes < REQUIRED_MINUTES_PER_CALL) {
@@ -28,36 +29,30 @@ export const startCall = async (req, res) => {
       });
     }
 
-    // Zadarma Callback
-    api.request(
-      "/v1/request/callback/",
-      {
-        from: clientPhoneNumber,
-        to: userPhone,
-      },
-      async (err, data) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ success: false, message: "Zadarma Error" });
-        }
+    // 2. Twilio Call ማስጀመር (በ Zadarma ፋንታ)
+    try {
+      await client.calls.create({
+        from: process.env.TWILIO_PHONE_NUMBER, // የእርስዎ Twilio ቁጥር
+        to: userPhone, // የሚደወልለት ሰው
+        url: "http://demo.twilio.com/docs/voice.xml", // ወይም የእርስዎ Flow URL
+      });
 
-        const response = typeof data === "string" ? JSON.parse(data) : data;
+      // 3. ደቂቃ መቀነስ
+      user.minutes -= REQUIRED_MINUTES_PER_CALL;
+      await user.save();
 
-        if (response.status === "success") {
-          user.minutes -= REQUIRED_MINUTES_PER_CALL;
-          await user.save();
-          res.status(200).json({
-            success: true,
-            message: "ጥሪው እየተሞከረ ነው!",
-            minutesRemaining: user.minutes,
-          });
-        } else {
-          res.status(400).json({ success: false, message: response.message });
-        }
-      }
-    );
+      console.log(`✅ ጥሪ ተጀምሯል ለ: ${userPhone}`);
+      res.status(200).json({
+        success: true,
+        message: "ጥሪው እየተሞከረ ነው!",
+        minutesRemaining: user.minutes,
+      });
+    } catch (twilioErr) {
+      console.error("❌ Twilio Error:", twilioErr.message);
+      res.status(500).json({ success: false, message: "Twilio ጥሪ መጀመር አልቻለም" });
+    }
   } catch (error) {
+    console.error("❌ Database Error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 };
