@@ -15,33 +15,38 @@ const transporter = nodemailer.createTransport({
 
 // --- OTP መላኪያ ---
 router.post("/register-send-otp", async (req, res) => {
-  const { email, phone } = req.body;
-  if (!email || !phone)
-    return res.status(400).json({ success: false, message: "መረጃው አልተሟላም" });
-
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
   try {
-    // ዳታቤዝ ማደስ
-    await User.findOneAndUpdate(
-      { email },
-      { email, phone, otp, isVerified: false },
-      { upsert: true, new: true }
-    );
+    const { email, phone } = req.body;
+    if (!email || !phone)
+      return res.status(400).json({ success: false, message: "መረጃው አልተሟላም" });
 
-    // ኢሜይል መላክ
-    await transporter.sendMail({
-      from: `"Habesha Tel" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "የምዝገባ ኮድዎ",
-      html: `<b>የምዝገባ ኮድዎ: <span style="font-size: 20px; color: blue;">${otp}</span></b>`,
-    });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    console.log(`✅ OTP sent to: ${email}`);
-    res.status(200).json({ success: true, message: "OTP ተልኳል" });
+    try {
+      // ዳታቤዝ ማደስ
+      await User.findOneAndUpdate(
+        { email },
+        { email, phone, otp, isVerified: false },
+        { upsert: true, new: true }
+      );
+
+      // ኢሜይል መላክ
+      await transporter.sendMail({
+        from: `"Habesha Tel" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "የምዝገባ ኮድዎ",
+        html: `<b>የምዝገባ ኮድዎ: <span style="font-size: 20px; color: blue;">${otp}</span></b>`,
+      });
+
+      console.log(`✅ OTP sent to: ${email}`);
+      res.status(200).json({ success: true, message: "OTP ተልኳል" });
+    } catch (error) {
+      console.error("❌ Email error:", error);
+      res.status(500).json({ success: false, message: "ኢሜይል መላክ አልተቻለም" });
+    }
   } catch (error) {
-    console.error("❌ Email error:", error);
-    res.status(500).json({ success: false, message: "ኢሜይል መላክ አልተቻለም" });
+    console.error("❌ CRITICAL ERROR:", error.message);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
